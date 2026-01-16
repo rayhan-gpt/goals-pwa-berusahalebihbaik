@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goals</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2563eb">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+body{
+  font-family:Poppins,sans-serif;
+  margin:0;padding:20px;
+  background:linear-gradient(135deg,#60a5fa,#2563eb);
+  color:#fff;
+}
+h1{text-align:center}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:15px}
+.stat{background:#fff;color:#000;border-radius:14px;padding:12px;text-align:center}
+.nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+button{border:none;border-radius:12px;padding:8px 14px}
+#calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.day{background:#fff;color:#000;border-radius:12px;padding:10px;text-align:center;cursor:pointer}
+.day.done{background:#22c55e;color:#fff}
+.day.today{outline:3px solid #1d4ed8}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center}
+.box{background:#fff;color:#000;border-radius:16px;padding:20px;width:90%;max-width:420px}
+label{display:flex;align-items:center;margin:6px 0}
+input{margin-right:8px}
+.cert{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#020617;color:#fff}
+.cert div{background:#1e293b;padding:30px;border-radius:18px;text-align:center}
+</style>
+</head>
+
+<body>
+<h1>Goals</h1>
+
+<div class="stats">
+  <div class="stat">🔥 Streak<br><b id="streak">0</b></div>
+  <div class="stat">📅 Hari Bersih<br><b id="daysOk">0</b></div>
+  <div class="stat">📊 Bulan Ini<br><b id="monthPct">0%</b></div>
+</div>
+
+<div class="nav">
+  <button onclick="changeMonth(-1)">◀</button>
+  <b id="title"></b>
+  <button onclick="changeMonth(1)">▶</button>
+</div>
+
+<div id="calendar"></div>
+
+<div class="cert" id="cert">
+  <div>
+    <h2>🏆 Sertifikat Streak</h2>
+    <h1 id="certText"></h1>
+    <button onclick="location.reload()">Tutup</button>
+  </div>
+</div>
+
+<script>
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
+}
+
+if("Notification" in window && Notification.permission!=="granted"){
+  Notification.requestPermission();
+}
+
+const acts=[
+"Sholat Tahajud","Baca Al-Waqiah","Belajar / Tugas",
+"Sholat Subuh","Olahraga Pagi","Sholat Dzuhur",
+"Sholat Ashar","Sholat Magrib","Sholat Isya",
+"Olahraga Malam","Menjaga Diri (tidak onani)"
+];
+
+let now=new Date();
+
+function k(y,m,d){return `${y}-${m}-${d}`}
+function days(y,m){return new Date(y,m+1,0).getDate()}
+
+function render(){
+calendar.innerHTML='';
+title.textContent=now.toLocaleDateString('id-ID',{month:'long',year:'numeric'});
+for(let d=1;d<=days(now.getFullYear(),now.getMonth());d++){
+  let box=document.createElement('div');
+  box.className='day';
+  box.textContent=d;
+  let data=JSON.parse(localStorage.getItem(k(now.getFullYear(),now.getMonth(),d))||'{}');
+  if(data["Menjaga Diri (tidak onani)"]) box.classList.add('done');
+  if(d===new Date().getDate()&&now.getMonth()===new Date().getMonth()) box.classList.add('today');
+  box.onclick=()=>openDay(d);
+  calendar.appendChild(box);
+}
+stats();
+}
+
+function openDay(d){
+let modal=document.createElement('div');
+modal.className='modal';
+let box=document.createElement('div');
+box.className='box';
+box.innerHTML=`<h3>Tanggal ${d}</h3>`;
+let keyDay=k(now.getFullYear(),now.getMonth(),d);
+let data=JSON.parse(localStorage.getItem(keyDay)||'{}');
+
+acts.forEach(a=>{
+ let cb=document.createElement('input');
+ cb.type='checkbox'; cb.checked=!!data[a];
+ cb.onchange=()=>{data[a]=cb.checked;localStorage.setItem(keyDay,JSON.stringify(data));render();}
+ let lb=document.createElement('label');
+ lb.append(cb,document.createTextNode(a));
+ box.appendChild(lb);
+});
+
+let close=document.createElement('button');
+close.textContent='Tutup';
+close.onclick=()=>modal.remove();
+box.appendChild(close);
+modal.appendChild(box);
+document.body.appendChild(modal);
+}
+
+function stats(){
+let streak=0,daysOk=0;
+let t=new Date();t.setHours(0,0,0,0);
+for(let i=0;i<2000;i++){
+ let d=new Date(t);d.setDate(d.getDate()-i);
+ let data=JSON.parse(localStorage.getItem(k(d.getFullYear(),d.getMonth(),d.getDate()))||'{}');
+ if(data["Menjaga Diri (tidak onani)"]){daysOk++; if(i===streak) streak++;}
+ else if(i===streak) break;
+}
+streakEl.textContent=streak;
+daysOkEl.textContent=daysOk;
+
+if([7,30,60,90].includes(streak)){
+ certText.textContent=streak+" Hari";
+ cert.style.display='flex';
+}
+}
+
+function changeMonth(n){now.setMonth(now.getMonth()+n);render()}
+render();
+</script>
+</body>
+</html>
